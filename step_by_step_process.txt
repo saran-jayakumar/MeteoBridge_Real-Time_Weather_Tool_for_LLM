@@ -1,0 +1,17 @@
+Create Project
+↓
+Install Packages
+↓
+Configure API
+↓
+Create Server
+↓
+Fetch Weather
+↓
+Get JSON
+↓
+Convert to Text
+↓
+Show Result
+↓
+Convert into MCP Server
