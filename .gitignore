@@ -1,0 +1,22 @@
+# Maven build outputs
+target/
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+mcp-server.log
+
+# IDEs and editors
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.metadata
+.DS_Store
+
+# Temporary files
+test_mcp.py
