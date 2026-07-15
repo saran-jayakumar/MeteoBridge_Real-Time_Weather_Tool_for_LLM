@@ -8,13 +8,18 @@ import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification;
+import io.modelcontextprotocol.server.transport.McpServerTransportProvider;
 import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
+import io.modelcontextprotocol.server.transport.WebMvcSseServerTransport;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
@@ -24,14 +29,39 @@ import java.util.Map;
 public class CustomMcpServerConfig {
 
     @Bean
-    public McpSyncServer mcpSyncServer(WeatherService weatherService) {
-        // Instantiate Jackson 3's JsonMapper manually inside this method (so it is not registered as a bean,
-        // and Spring's reflection post-processors won't scan it and crash on Java 25!)
-        JsonMapper jsonMapper = new JsonMapper();
+    public WebMvcSseServerTransport webMvcSseServerTransport() {
+        if (System.getenv("PORT") != null) {
+            // Instantiate Jackson 3's JsonMapper manually inside this method (so it is not registered as a bean,
+            // and Spring's reflection post-processors won't scan it and crash on Java 25!)
+            JsonMapper jsonMapper = new JsonMapper();
+            McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(jsonMapper);
+            return new WebMvcSseServerTransport(mcpJsonMapper, "/mcp/message");
+        }
+        return null;
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> mcpRouterFunction(ObjectProvider<WebMvcSseServerTransport> sseTransportProvider) {
+        WebMvcSseServerTransport transport = sseTransportProvider.getIfAvailable();
+        if (transport != null) {
+            return transport.getRouterFunction();
+        }
+        return null;
+    }
+
+    @Bean
+    public McpSyncServer mcpSyncServer(WeatherService weatherService, ObjectProvider<WebMvcSseServerTransport> sseTransportProvider) {
+        McpServerTransportProvider transport;
+        WebMvcSseServerTransport sseTransport = sseTransportProvider.getIfAvailable();
         
-        // Wrap it in Jackson3McpJsonMapper which implements McpJsonMapper
-        McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(jsonMapper);
-        StdioServerTransportProvider transport = new StdioServerTransportProvider(mcpJsonMapper);
+        if (System.getenv("PORT") != null && sseTransport != null) {
+            transport = sseTransport;
+        } else {
+            // Instantiate Jackson 3's JsonMapper manually inside this method
+            JsonMapper jsonMapper = new JsonMapper();
+            McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(jsonMapper);
+            transport = new StdioServerTransportProvider(mcpJsonMapper);
+        }
 
         // Instantiate standard Jackson 2 ObjectMapper for serialization of return types
         ObjectMapper objectMapper = new ObjectMapper();
