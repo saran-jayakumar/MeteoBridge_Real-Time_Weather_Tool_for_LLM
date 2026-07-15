@@ -122,14 +122,41 @@ Add the following to your `claude_desktop_config.json`:
 
 ---
 
-## Containerized Local Deployment (Docker)
+## Deployment Options for Public/External Users
 
-### 1. Build the Docker Image
-```bash
-docker build -t your-username/weather-mcp-server .
+Other users who want to use your weather MCP server can run it easily with their own OpenWeather API keys using one of the following methods:
+
+### 1. One-Click Deploy to Render
+If they want to host their own private HTTP/SSE web service, they can deploy it to Render automatically by clicking the button below:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/saran-jayakumar/MeteoBridge_Real-Time_Weather_Tool_for_LLM)
+
+Render will guide them to enter their own `OPENWEATHER_API_KEY` environment variable during the setup.
+
+### 2. Run Locally via Docker (Pre-built Image)
+They can run the server inside a local Docker container (which handles standard I/O) without needing Java or Maven installed. All they need to do is add this block to their `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "weather-mcp-server": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "OPENWEATHER_API_KEY=their_own_openweather_api_key_here",
+        "saran-jayakumar/weather-mcp-server:latest"
+      ]
+    }
+  }
+}
 ```
 
-### 2. Run the Container (STDIO)
+### 3. Build and Run locally (Docker Dev)
+For local development, they can also build the image from source and run it:
 ```bash
-docker run -i --rm -e OPENWEATHER_API_KEY="your_openweather_api_key_here" your-username/weather-mcp-server
+docker build -t saran-jayakumar/weather-mcp-server .
+docker run -i --rm -e OPENWEATHER_API_KEY="their_own_openweather_api_key_here" saran-jayakumar/weather-mcp-server
 ```
