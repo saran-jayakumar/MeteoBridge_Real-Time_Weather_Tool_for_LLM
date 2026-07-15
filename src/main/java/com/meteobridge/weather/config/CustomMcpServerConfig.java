@@ -8,7 +8,6 @@ import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification;
-import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
 import org.springframework.ai.mcp.server.webmvc.transport.WebMvcStreamableServerTransportProvider;
 import io.modelcontextprotocol.json.McpJsonMapper;
@@ -31,7 +30,8 @@ public class CustomMcpServerConfig {
     @Bean
     public WebMvcStreamableServerTransportProvider webMvcStreamableServerTransportProvider() {
         if (System.getenv("PORT") != null) {
-            // Instantiate Jackson 3's JsonMapper manually inside this method
+            // Instantiate Jackson 3's JsonMapper manually inside this method (so it is not registered as a bean,
+            // and Spring's reflection post-processors won't scan it and crash on Java 25!)
             JsonMapper jsonMapper = new JsonMapper();
             McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(jsonMapper);
             return WebMvcStreamableServerTransportProvider.builder()
@@ -53,17 +53,7 @@ public class CustomMcpServerConfig {
 
     @Bean
     public McpSyncServer mcpSyncServer(WeatherService weatherService, ObjectProvider<WebMvcStreamableServerTransportProvider> sseTransportProvider) {
-        McpServerTransportProvider transport;
         WebMvcStreamableServerTransportProvider sseTransport = sseTransportProvider.getIfAvailable();
-        
-        if (System.getenv("PORT") != null && sseTransport != null) {
-            transport = sseTransport;
-        } else {
-            // Instantiate Jackson 3's JsonMapper manually inside this method
-            JsonMapper jsonMapper = new JsonMapper();
-            McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(jsonMapper);
-            transport = new StdioServerTransportProvider(mcpJsonMapper);
-        }
 
         // Instantiate standard Jackson 2 ObjectMapper for serialization of return types
         ObjectMapper objectMapper = new ObjectMapper();
@@ -152,13 +142,28 @@ public class CustomMcpServerConfig {
             })
             .build();
 
-        // Create and return the synchronous MCP server manually using the v2.0.0 tools builder method
-        return McpServer.sync(transport)
-                .serverInfo("weather-mcp-server", "1.0.0")
-                .capabilities(ServerCapabilities.builder()
-                        .tools(true)
-                        .build())
-                .tools(getCurrentWeatherSpec, getWeatherForecastSpec)
-                .build();
+        // Overloaded builder compilation handles each transport type (McpStreamableServerTransportProvider or McpServerTransportProvider) separately
+        if (System.getenv("PORT") != null && sseTransport != null) {
+            return McpServer.sync(sseTransport)
+                    .serverInfo("weather-mcp-server", "1.0.0")
+                    .capabilities(ServerCapabilities.builder()
+                            .tools(true)
+                            .build())
+                    .tools(getCurrentWeatherSpec, getWeatherForecastSpec)
+                    .build();
+        } else {
+            // Instantiate Jackson 3's JsonMapper manually inside this method
+            JsonMapper jsonMapper = new JsonMapper();
+            McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(jsonMapper);
+            StdioServerTransportProvider stdioTransport = new StdioServerTransportProvider(mcpJsonMapper);
+            
+            return McpServer.sync(stdioTransport)
+                    .serverInfo("weather-mcp-server", "1.0.0")
+                    .capabilities(ServerCapabilities.builder()
+                            .tools(true)
+                            .build())
+                    .tools(getCurrentWeatherSpec, getWeatherForecastSpec)
+                    .build();
+        }
     }
 }
