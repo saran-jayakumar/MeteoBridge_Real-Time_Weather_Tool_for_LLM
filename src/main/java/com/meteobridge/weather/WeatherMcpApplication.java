@@ -10,12 +10,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 })
 public class WeatherMcpApplication {
     public static void main(String[] args) {
+        String port = System.getenv("PORT");
+        System.err.println("DEBUG STARTUP: PORT environment variable is: " + port);
         SpringApplication app = new SpringApplication(WeatherMcpApplication.class);
-        // If PORT is defined, run as a Web (Servlet) application (e.g. on Render).
-        // Otherwise, run as a console (NONE) application (e.g. locally inside Claude Desktop).
-        if (System.getenv("PORT") != null) {
+        if (port != null) {
+            System.err.println("DEBUG STARTUP: Starting as SERVLET web application...");
             app.setWebApplicationType(WebApplicationType.SERVLET);
         } else {
+            System.err.println("DEBUG STARTUP: Starting as NONE console application...");
             app.setWebApplicationType(WebApplicationType.NONE);
         }
         app.run(args);
