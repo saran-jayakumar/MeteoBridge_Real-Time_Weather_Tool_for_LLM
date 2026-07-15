@@ -31,10 +31,10 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring AI MCP Server Starter -->
+        <!-- Spring AI MCP Server WebMVC Starter -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-mcp-server</artifactId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
         </dependency>
 
         <!-- Jackson Annotations (explicitly added to resolve runtime NoClassDefFoundError) -->
