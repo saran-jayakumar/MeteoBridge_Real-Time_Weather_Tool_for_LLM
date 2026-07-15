@@ -108,8 +108,10 @@ Add the following to your `claude_desktop_config.json`:
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/client-sse",
-        "https://YOUR-RENDER-SERVICE-NAME.onrender.com/mcp/message"
+        "mcp-remote",
+        "https://YOUR-RENDER-SERVICE-NAME.onrender.com/mcp/message",
+        "--transport",
+        "sse"
       ]
     }
   }
