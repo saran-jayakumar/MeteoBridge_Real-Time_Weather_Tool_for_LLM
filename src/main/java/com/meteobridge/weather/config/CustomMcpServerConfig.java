@@ -8,9 +8,9 @@ import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification;
-import io.modelcontextprotocol.server.transport.McpServerTransportProvider;
+import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
-import io.modelcontextprotocol.server.transport.WebMvcSseServerTransportProvider;
+import org.springframework.ai.mcp.server.webmvc.transport.WebMvcStreamableServerTransportProvider;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -29,20 +29,22 @@ import java.util.Map;
 public class CustomMcpServerConfig {
 
     @Bean
-    public WebMvcSseServerTransportProvider webMvcSseServerTransportProvider() {
+    public WebMvcStreamableServerTransportProvider webMvcStreamableServerTransportProvider() {
         if (System.getenv("PORT") != null) {
-            // Instantiate Jackson 3's JsonMapper manually inside this method (so it is not registered as a bean,
-            // and Spring's reflection post-processors won't scan it and crash on Java 25!)
+            // Instantiate Jackson 3's JsonMapper manually inside this method
             JsonMapper jsonMapper = new JsonMapper();
             McpJsonMapper mcpJsonMapper = new JacksonMcpJsonMapper(jsonMapper);
-            return new WebMvcSseServerTransportProvider(mcpJsonMapper, "/mcp/message");
+            return WebMvcStreamableServerTransportProvider.builder()
+                .jsonMapper(mcpJsonMapper)
+                .mcpEndpoint("/mcp/message")
+                .build();
         }
         return null;
     }
 
     @Bean
-    public RouterFunction<ServerResponse> mcpRouterFunction(ObjectProvider<WebMvcSseServerTransportProvider> sseTransportProvider) {
-        WebMvcSseServerTransportProvider transport = sseTransportProvider.getIfAvailable();
+    public RouterFunction<ServerResponse> mcpRouterFunction(ObjectProvider<WebMvcStreamableServerTransportProvider> sseTransportProvider) {
+        WebMvcStreamableServerTransportProvider transport = sseTransportProvider.getIfAvailable();
         if (transport != null) {
             return transport.getRouterFunction();
         }
@@ -50,9 +52,9 @@ public class CustomMcpServerConfig {
     }
 
     @Bean
-    public McpSyncServer mcpSyncServer(WeatherService weatherService, ObjectProvider<WebMvcSseServerTransportProvider> sseTransportProvider) {
+    public McpSyncServer mcpSyncServer(WeatherService weatherService, ObjectProvider<WebMvcStreamableServerTransportProvider> sseTransportProvider) {
         McpServerTransportProvider transport;
-        WebMvcSseServerTransportProvider sseTransport = sseTransportProvider.getIfAvailable();
+        WebMvcStreamableServerTransportProvider sseTransport = sseTransportProvider.getIfAvailable();
         
         if (System.getenv("PORT") != null && sseTransport != null) {
             transport = sseTransport;

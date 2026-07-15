@@ -109,7 +109,7 @@ Add the following to your `claude_desktop_config.json`:
       "args": [
         "-y",
         "@modelcontextprotocol/client-sse",
-        "https://YOUR-RENDER-SERVICE-NAME.onrender.com/mcp/sse"
+        "https://YOUR-RENDER-SERVICE-NAME.onrender.com/mcp/message"
       ]
     }
   }
